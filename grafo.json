@@ -1,0 +1,17 @@
+{
+  "vertices": [
+    {"nombre": "A", "x": 125, "y": 180},
+    {"nombre": "B", "x": 250, "y": 70},
+    {"nombre": "C", "x": 375, "y": 180},
+    {"nombre": "D", "x": 250, "y": 290},
+    {"nombre": "E", "x": 375, "y": 290}
+  ],
+  "aristas": [
+    {"extremos": [0, 1], "etiqueta": [172, 113]},
+    {"extremos": [1, 2], "etiqueta": [315, 113]},
+    {"extremos": [2, 0], "etiqueta": [245, 202]},
+    {"extremos": [0, 3], "etiqueta": [163, 246]},
+    {"extremos": [3, 4], "etiqueta": [310, 278]},
+    {"extremos": [4, 0], "etiqueta": [282, 232]}
+  ]
+}

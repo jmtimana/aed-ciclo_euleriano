@@ -17,35 +17,43 @@
 </main>
 <script>
 const D=280;
-const graph=`<svg class="graph" viewBox="0 0 520 360" role="img" aria-label="Grafo de cinco vértices y seis aristas identificadas"><g>${[[125,180,250,70],[250,70,375,180],[375,180,125,180],[125,180,250,290],[250,290,375,290],[375,290,125,180]].map((p,i)=>`<line class="edge" data-edge="${i}" x1="${p[0]}" y1="${p[1]}" x2="${p[2]}" y2="${p[3]}"/>`).join('')}</g><g fill="#aebed2" font-family="monospace" font-size="13" font-weight="700"><text x="172" y="113">e1</text><text x="315" y="113">e2</text><text x="245" y="202">e3</text><text x="163" y="246">e4</text><text x="310" y="278">e5</text><text x="282" y="232">e6</text></g>${[['A',125,180],['B',250,70],['C',375,180],['D',250,290],['E',375,290]].map(([n,x,y])=>`<g class="node" data-node="${n}"><circle cx="${x}" cy="${y}" r="23"/><text x="${x}" y="${y}">${n}</text></g>`).join('')}</svg>`;
+const {grafo, eventos, caso_vacio}=window.datosEuler;
+const vertices=grafo.vertices, aristas=grafo.aristas;
+const nombre=i=>vertices[i].nombre;
+const final=eventos[eventos.length-1], ruta=[...final.resultado].reverse().map(nombre);
+const grados=vertices.map((_,i)=>aristas.reduce((n,a)=>n+a.extremos.filter(v=>v===i).length,0));
+const graph=`<svg class="graph" viewBox="0 0 520 360" role="img" aria-label="Grafo de cinco vértices y seis aristas identificadas"><g>${aristas.map((a,i)=>{const [u,v]=a.extremos.map(j=>vertices[j]);return `<line class="edge" data-edge="${i}" x1="${u.x}" y1="${u.y}" x2="${v.x}" y2="${v.y}"/>`}).join('')}</g><g fill="#aebed2" font-family="monospace" font-size="13" font-weight="700">${aristas.map((a,i)=>`<text x="${a.etiqueta[0]}" y="${a.etiqueta[1]}">e${i+1}</text>`).join('')}</g>${vertices.map(({nombre:n,x,y})=>`<g class="node" data-node="${n}"><circle cx="${x}" cy="${y}" r="23"/><text x="${x}" y="${y}">${n}</text></g>`).join('')}</svg>`;
 const scenes=[
 {a:0,b:15,html:`<p class="eyebrow">Un recorrido con una regla</p><h1 class="title">El camino que<br>vuelve a casa</h1><p class="lead">Ciclo euleriano y algoritmo de Hierholzer</p><p class="lead small">Proyecto audiovisual · Implementación en C++</p>`},
 {a:15,b:38,html:`<p class="eyebrow">01 · Concepto</p><h1 class="title">Cada arista,<br>una sola vez.</h1><p class="lead">El ciclo euleriano resuelve el problema de recorrer todas las conexiones de un grafo sin repetir ninguna arista y regresar al origen. Los vértices sí pueden repetirse.</p>`},
-{a:38,b:66,html:`<p class="eyebrow">02 · Antes de buscar</p><div class="layout"><div>${graph}</div><div class="side"><h2>¿Puede existir?</h2><p>Revisamos dos condiciones: los vértices que tienen aristas están conectados entre sí y todos sus grados son pares.</p><div class="code"><span class="ok">A: 4</span> · B: 2 · C: 2<br>D: 2 · E: 2<br>6 aristas · 5 vértices activos</div><p class="small">El grado cuenta cuántas aristas tocan al vértice.</p></div></div>`},
+{a:38,b:66,html:`<p class="eyebrow">02 · Antes de buscar</p><div class="layout"><div>${graph}</div><div class="side"><h2>¿Puede existir?</h2><p>Revisamos dos condiciones: los vértices que tienen aristas están conectados entre sí y todos sus grados son pares.</p><div class="code"><span class="ok">${nombre(0)}: ${grados[0]}</span> · ${nombre(1)}: ${grados[1]} · ${nombre(2)}: ${grados[2]}<br>${nombre(3)}: ${grados[3]} · ${nombre(4)}: ${grados[4]}<br>${aristas.length} aristas · ${grados.filter(Boolean).length} vértices activos</div><p class="small">El grado cuenta cuántas aristas tocan al vértice.</p></div></div>`},
 {a:66,b:126,html:`<p class="eyebrow">03 · Cómo funciona Hierholzer</p><div class="layout"><div class="side"><h2 id="algTitle">Primero: inicia</h2><div class="code" id="algText"></div></div><div>${graph}</div></div>`},
-{a:126,b:196,html:`<p class="eyebrow">04 · Ejecución comentada</p><div class="layout"><div>${graph}</div><div class="side"><h2 id="action">Inicio</h2><p id="desc"></p><div class="stack-demo"><div class="stack-label"><span class="small">Pila ? tope a la derecha</span><span class="stack-operation" id="stackOperation"></span></div><div class="stack-track" id="stack" aria-label="Contenido de la pila"></div><div class="stack-hint">BASE ? TOPE</div></div><div class="small">Resultado temporal (orden de salida)</div><p class="route" id="out"></p><p class="small">Aristas marcadas: <b id="count">0 / 6</b></p></div></div>`},
-{a:196,b:226,html:`<p class="eyebrow">05 · Verificación del ciclo</p><div class="layout"><div>${graph}</div><div class="side"><h2>Resultado invertido</h2><p class="route">A → B → C → A → D → E → A</p><div class="code"><span class="ok">Inicio = fin:</span> A = A ✓<br><span class="ok">Pasos:</span> 7 vértices − 1 = 6 aristas ✓<br><span class="ok">IDs usados:</span> e1 e2 e3 e4 e5 e6<br>ninguno repetido y ninguno falta ✓</div><p class="small">La implementación también verifica grados, conectividad y consumo de todas las aristas.</p></div></div>`},
-{a:226,b:246,html:`<p class="eyebrow">06 · Caso borde</p><div class="layout"><div style="display:grid;place-items:center"><svg viewBox="0 0 180 180" width="170"><circle cx="90" cy="90" r="28" fill="#111d30" stroke="#49e0d0" stroke-width="3"/><text x="90" y="96" fill="white" text-anchor="middle" font-size="20">A</text></svg></div><div class="side"><h2>Grafo sin aristas</h2><p>Con un vértice y cero aristas, el algoritmo devuelve el recorrido trivial [A]. No existe ningún tramo que recorrer. El código adopta esta convención.</p><span class="pill">E = 0 · resultado: A</span></div></div>`},
+{a:126,b:196,html:`<p class="eyebrow">04 · Ejecución comentada</p><div class="layout"><div>${graph}</div><div class="side"><h2 id="action">Inicio</h2><p id="desc"></p><div class="stack-demo"><div class="stack-label"><span class="small">Pila ? tope a la derecha</span><span class="stack-operation" id="stackOperation"></span></div><div class="stack-track" id="stack" aria-label="Contenido de la pila"></div><div class="stack-hint">BASE ? TOPE</div></div><div class="small">Resultado temporal (orden de salida)</div><p class="route" id="out"></p><p class="small">Aristas marcadas: <b id="count">0 / ${aristas.length}</b></p></div></div>`},
+{a:196,b:226,html:`<p class="eyebrow">05 · Verificación del ciclo</p><div class="layout"><div>${graph}</div><div class="side"><h2>Resultado invertido</h2><p class="route">${ruta.join(" → ")}</p><div class="code"><span class="ok">Inicio = fin:</span> ${ruta[0]} = ${ruta[ruta.length-1]} ✓<br><span class="ok">Pasos:</span> ${ruta.length} vértices − 1 = ${final.usadas.length} aristas ✓<br><span class="ok">IDs usados:</span> ${final.usadas.map(i=>"e"+(i+1)).join(" ")}<br>ninguno repetido y ninguno falta ✓</div><p class="small">La implementación también verifica grados, conectividad y consumo de todas las aristas.</p></div></div>`},
+{a:226,b:246,html:`<p class="eyebrow">06 · Caso borde</p><div class="layout"><div style="display:grid;place-items:center"><svg viewBox="0 0 180 180" width="170"><circle cx="90" cy="90" r="28" fill="#111d30" stroke="#49e0d0" stroke-width="3"/><text x="90" y="96" fill="white" text-anchor="middle" font-size="20">A</text></svg></div><div class="side"><h2>Grafo sin aristas</h2><p>Con un vértice y cero aristas, el algoritmo devuelve el recorrido trivial [${nombre(caso_vacio[caso_vacio.length-1].resultado[0])}]. No existe ningún tramo que recorrer. El código adopta esta convención.</p><span class="pill">E = ${caso_vacio[caso_vacio.length-1].usadas.length} · resultado: ${nombre(caso_vacio[caso_vacio.length-1].resultado[0])}</span></div></div>`},
 {a:246,b:272,html:`<p class="eyebrow">07 · Complejidad</p><h1 class="title">Lineal en el grafo.</h1><div class="stats"><div><b>O(V + E)</b><span>tiempo</span></div><div><b>O(V + E)</b><span>espacio total</span></div></div><p class="lead">V = vértices; E = aristas. Revisar grados y conectividad cuesta O(V+E); Hierholzer procesa cada arista una vez. Pila, resultado, marcadores y listas ocupan O(V+E).</p>`},
 {a:272,b:280,html:`<p class="eyebrow">Fin · Gracias</p><h1 class="title">Todas las aristas.<br>Un solo ciclo.</h1><p class="lead small">Integrantes: Jose Manuel Timana Carmona · Alondra Solange Obregon Carhuavilca · Josue Yeremi Huaman Huamani</p>`}
 ];
 // Cada estado de esta traza coincide con una frase narrada y una acción visual.
-const run=[
-['Iniciar','La pila comienza con A.',['A'],[],[]],
-['Tomar e1: A–B','Marco e1 como usada y apilo B.',['A','B'],[],[0]],
-['Tomar e2: B–C','Marco e2 como usada y apilo C.',['A','B','C'],[],[0,1]],
-['Tomar e3: C–A','Regreso a A por e3. A aún tiene aristas libres.',['A','B','C','A'],[],[0,1,2]],
-['Tomar e4: A–D','No cierro aquí: A tiene e4 sin usar; continúo por D.',['A','B','C','A','D'],[],[0,1,2,3]],
-['Tomar e5: D–E','Marco e5 y apilo E.',['A','B','C','A','D','E'],[],[0,1,2,3,4]],
-['Tomar e6: E–A','Marco e6 y cierro el recorrido en A.',['A','B','C','A','D','E','A'],[],[0,1,2,3,4,5]],
-['Retroceder: A','A no tiene aristas libres. Lo añado al resultado y desapilo.',['A','B','C','A','D','E'],['A'],[0,1,2,3,4,5]],
-['Retroceder: E','Añado E al resultado al desapilar.',['A','B','C','A','D'],['A','E'],[0,1,2,3,4,5]],
-['Retroceder: D','Añado D al resultado.',['A','B','C','A'],['A','E','D'],[0,1,2,3,4,5]],
-['Retroceder: A','Añado A al resultado.',['A','B','C'],['A','E','D','A'],[0,1,2,3,4,5]],
-['Retroceder: C','Añado C al resultado.',['A','B'],['A','E','D','A','C'],[0,1,2,3,4,5]],
-['Retroceder: B','Añado B al resultado.',['A'],['A','E','D','A','C','B'],[0,1,2,3,4,5]],
-['Pila vacía','Añado el A inicial. Invierto este resultado para obtener el ciclo.',[''],['A','E','D','A','C','B','A'],[0,1,2,3,4,5],'Añado el A inicial. Pila vacía; invierto la lista para el circuito.']
-];
+const run=eventos.map((ev,i)=>{
+ const n=nombre(ev.vertice), previous=eventos[i-1], desde=previous&&previous.pila.length?nombre(previous.pila[previous.pila.length-1]):n, edge='e'+(ev.arista+1);
+ let title,desc;
+ if(ev.accion==='start'){title='Iniciar';desc=`La pila comienza con ${n}.`}
+ else if(ev.accion==='push'){
+   title=`Tomar ${edge}: ${desde}–${n}`;
+   if(ev.usadas.length===3) desc=`Regreso a ${n} por ${edge}. ${n} aún tiene aristas libres.`;
+   else if(ev.usadas.length===4) desc=`No cierro aquí: ${desde} tiene ${edge} sin usar; continúo por ${n}.`;
+   else if(ev.usadas.length===aristas.length) desc=`Marco ${edge} y cierro el recorrido en ${n}.`;
+   else desc=`Marco ${edge}${ev.usadas.length<=2?' como usada':''} y apilo ${n}.`;
+ } else {
+   const count=ev.resultado.length;
+   title=ev.pila.length?`Retroceder: ${n}`:'Pila vacía';
+   if(count===1) desc=`${n} no tiene aristas libres. Lo añado al resultado y desapilo.`;
+   else if(!ev.pila.length) desc=`Añado el ${n} inicial. Invierto este resultado para obtener el ciclo.`;
+   else desc=`Añado ${n} al resultado${count===2?' al desapilar':''}.`;
+ }
+ return [title,desc,ev.pila.map(nombre),ev.resultado.map(nombre),ev.usadas];
+});
 const algBeats=[
 {title:'1 · Condiciones necesarias',text:'<b>Antes de ejecutar:</b> todos los grados deben ser pares y los vértices con aristas deben estar en una sola componente conexa. Si falla una condición, no existe ciclo euleriano.'},
 {title:'2 · Explorar una arista',text:'<b>Inicialización:</b> apilar un vértice de partida.<br><b>Mientras el tope tenga una arista no usada:</b> marcar su ID y apilar el otro extremo. Cada arista se marca una sola vez.'},
@@ -61,7 +69,7 @@ const sequence=[
 let lastScene=-1;const stage=document.getElementById('stage');
 function displayEvent(index){const ev=sequence[index];if(!ev)return;const scene=scenes[ev.scene];if(lastScene!==ev.scene){stage.innerHTML=scene.html;lastScene=ev.scene}
  if(ev.scene===3){const beat=algBeats[ev.beat];document.getElementById('algTitle').textContent=beat.title;document.getElementById('algText').innerHTML=beat.text}
- if(ev.scene===4){const [title,desc,stack,out,used]=run[ev.step];document.getElementById('action').textContent=title;document.getElementById('desc').textContent=desc;const items=stack.filter(Boolean), previous=ev.step?run[ev.step-1][2].filter(Boolean):[], isPop=ev.step>0&&items.length<previous.length, vertex=isPop?previous.at(-1):items.at(-1), operation=document.getElementById('stackOperation'), stackEl=document.getElementById('stack');operation.textContent=isPop?`DESAPILAR ${vertex} ? RESULTADO`:`APILAR ${vertex}`;operation.classList.toggle('pop',isPop);stackEl.innerHTML=items.map((x,j)=>`<span class="chip ${j===items.length-1?'topchip':''} ${!isPop&&j===items.length-1?'enter':''}">${x}</span>`).join('')+(isPop?`<span class="chip leave" aria-hidden="true">${vertex}</span>`:'')+(!items.length?'<span class="stack-empty">Vac?a</span>':'');document.getElementById('out').textContent=out.join(' → ')||'—';document.getElementById('count').textContent=`${used.length} / 6`;document.querySelectorAll('.edge').forEach((e,j)=>{e.classList.toggle('used',used.includes(j));e.classList.toggle('current',used.length>0&&j===used[used.length-1])});document.querySelectorAll('.node').forEach(n=>n.classList.toggle('active',n.dataset.node===(stack.filter(Boolean).at(-1)||'')))}
+ if(ev.scene===4){const [title,desc,stack,out,used]=run[ev.step];document.getElementById('action').textContent=title;document.getElementById('desc').textContent=desc;const items=stack.filter(Boolean), previous=ev.step?run[ev.step-1][2].filter(Boolean):[], isPop=ev.step>0&&items.length<previous.length, vertex=isPop?previous.at(-1):items.at(-1), operation=document.getElementById('stackOperation'), stackEl=document.getElementById('stack');operation.textContent=isPop?`DESAPILAR ${vertex} ? RESULTADO`:`APILAR ${vertex}`;operation.classList.toggle('pop',isPop);stackEl.innerHTML=items.map((x,j)=>`<span class="chip ${j===items.length-1?'topchip':''} ${!isPop&&j===items.length-1?'enter':''}">${x}</span>`).join('')+(isPop?`<span class="chip leave" aria-hidden="true">${vertex}</span>`:'')+(!items.length?'<span class="stack-empty">Vac?a</span>':'');document.getElementById('out').textContent=out.join(' → ')||'—';document.getElementById('count').textContent=`${used.length} / ${aristas.length}`;document.querySelectorAll('.edge').forEach((e,j)=>{e.classList.toggle('used',used.includes(j));e.classList.toggle('current',used.length>0&&j===used[used.length-1])});document.querySelectorAll('.node').forEach(n=>n.classList.toggle('active',n.dataset.node===(stack.filter(Boolean).at(-1)||'')))}
  if(ev.scene===5)document.querySelectorAll('.edge').forEach(e=>{e.classList.add('used');e.classList.remove('current')});
 }
 </script></body></html>

@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import tempfile
 
@@ -11,6 +12,41 @@ from playwright.sync_api import sync_playwright
 import imageio_ffmpeg
 
 BASE = Path(__file__).resolve().parent
+
+def ejecutar_hierholzer(tmp):
+    """Compila la implementación y obtiene los estados emitidos al ejecutarla."""
+    grafo = json.loads((BASE / 'grafo.json').read_text(encoding='utf-8'))
+    vertices, aristas = grafo['vertices'], grafo['aristas']
+    entrada = f"{len(vertices)} {len(aristas)}\n" + ''.join(
+        f"{a['extremos'][0]} {a['extremos'][1]}\n" for a in aristas)
+    compilador = shutil.which('g++')
+    if not compilador:
+        raise RuntimeError('Se necesita g++ para compilar hierholzer.cpp')
+    ejecutable = Path(tmp) / ('hierholzer.exe' if os.name == 'nt' else 'hierholzer')
+    subprocess.run([compilador, '-std=c++11', '-O2', str(BASE / 'hierholzer.cpp'),
+                    '-o', str(ejecutable)], check=True)
+
+    def ejecutar(datos):
+        salida = subprocess.run([str(ejecutable)], input=datos, text=True,
+                                capture_output=True, check=True).stdout
+        eventos = []
+        for linea in salida.splitlines():
+            partes = linea.split()
+            accion, vertice, arista = partes[0], int(partes[1]), int(partes[2])
+            valores = list(map(int, partes[3:]))
+            listas = []
+            for _ in range(3):
+                cantidad = valores.pop(0)
+                listas.append(valores[:cantidad])
+                del valores[:cantidad]
+            if valores:
+                raise ValueError('Traza de Hierholzer inválida')
+            eventos.append(dict(accion=accion, vertice=vertice, arista=arista,
+                                pila=listas[0], resultado=listas[1], usadas=listas[2]))
+        return eventos
+
+    return dict(grafo=grafo, eventos=ejecutar(entrada),
+                caso_vacio=ejecutar('1 0\n'))
 
 def tiempos():
     datos = json.loads((BASE / 'duraciones.json').read_text(encoding='utf-8'))
@@ -29,10 +65,13 @@ def main():
     salida = BASE / 'video' / 'ciclo_euleriano.mp4'
     salida.parent.mkdir(exist_ok=True)
     width, height = (854, 480) if args.preview else (1920, 1080)
-    with tempfile.TemporaryDirectory(prefix='euler_render_') as tmp, sync_playwright() as p:
+    with tempfile.TemporaryDirectory(prefix='euler_render_') as tmp:
+      datos = ejecutar_hierholzer(tmp)
+      with sync_playwright() as p:
         executable = navegador()
         browser = p.chromium.launch(headless=True, **({'executable_path': executable} if executable else {}))
         page = browser.new_page(viewport={'width': 1140, 'height': 680}, device_scale_factor=1)
+        page.add_init_script('window.datosEuler = ' + json.dumps(datos, ensure_ascii=True) + ';')
         page.goto((BASE/'index.html').as_uri(), wait_until='load')
         page.add_style_tag(content='body{padding:0}.frame{width:1100px;max-width:none;aspect-ratio:16/9}.controls{visibility:hidden}')
         total = page.evaluate('sequence.length')
